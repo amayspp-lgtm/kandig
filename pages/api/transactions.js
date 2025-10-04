@@ -3,10 +3,9 @@ import Transaction from '../../models/Transaction';
 import { add, addWeeks, addMonths } from 'date-fns';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
-import nodeHtmlToImage from 'node-html-to-image';
-import puppeteer from 'puppeteer'; // Gunakan paket puppeteer biasa
 
 const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
+const APIFLASH_ACCESS_KEY = process.env.APIFLASH_ACCESS_KEY; // Tambahkan ini di .env.local
 
 function authenticate(req) {
     const cookies = cookie.parse(req.headers.cookie || '');
@@ -39,26 +38,16 @@ export default async function handler(req, res) {
         }
 
         const {
-            productName,
-            productPrice,
-            adminName,
-            buyerNumber,
-            hasActivePeriod,
-            activeDuration,
-            activeUnit,
-            hasWarranty,
-            warrantyDuration,
-            warrantyUnit
+            productName, productPrice, adminName, buyerNumber, hasActivePeriod,
+            activeDuration, activeUnit, hasWarranty, warrantyDuration, warrantyUnit
         } = req.body;
 
         if (!productName || !productPrice || !adminName || !buyerNumber) {
             return res.status(400).json({ success: false, error: 'Nama produk, harga, admin, dan nomor pembeli harus diisi.' });
         }
-
         if (hasActivePeriod && (!activeDuration || !activeUnit)) {
             return res.status(400).json({ success: false, error: 'Masa aktif harus diisi jika dicentang.' });
         }
-        
         if (hasWarranty && (!warrantyDuration || !warrantyUnit)) {
             return res.status(400).json({ success: false, error: 'Masa garansi harus diisi jika dicentang.' });
         }
@@ -106,44 +95,29 @@ export default async function handler(req, res) {
 
         try {
             const transaction = await Transaction.create({
-                productName,
-                productPrice,
-                adminName,
-                buyerNumber,
-                transactionCode,
-                hasActivePeriod,
-                activeDuration: hasActivePeriod ? parseInt(activeDuration) : null,
-                activeUnit: hasActivePeriod ? activeUnit : null,
-                activeExpiryDate: hasActivePeriod ? activeExpiryDate : null,
-                hasWarranty,
-                warrantyDuration: hasWarranty ? parseInt(warrantyDuration) : null,
-                warrantyUnit: hasWarranty ? warrantyUnit : null,
-                warrantyExpiryDate: hasWarranty ? warrantyExpiryDate : null,
+                productName, productPrice, adminName, buyerNumber, transactionCode,
+                hasActivePeriod, activeDuration: hasActivePeriod ? parseInt(activeDuration) : null,
+                activeUnit: hasActivePeriod ? activeUnit : null, activeExpiryDate: hasActivePeriod ? activeExpiryDate : null,
+                hasWarranty, warrantyDuration: hasWarranty ? parseInt(warrantyDuration) : null,
+                warrantyUnit: hasWarranty ? warrantyUnit : null, warrantyExpiryDate: hasWarranty ? warrantyExpiryDate : null,
             });
 
-            const htmlTemplate = `
-                <style>
-                    body { font-family: 'Poppins', sans-serif; background-color: #1a1a1a; color: #e0e0e0; padding: 20px; }
-                    .receipt-container { 
-                        width: 350px; 
-                        background-color: #1c1c1c; 
-                        border: 2px solid #00BFFF; 
-                        border-radius: 10px; 
-                        padding: 20px; 
-                        box-shadow: 0 0 15px rgba(0, 191, 255, 0.4); 
-                        text-align: left; 
-                    }
-                    .header { text-align: center; margin-bottom: 20px; }
-                    .header h1 { 
-                        color: #00BFFF; 
-                        font-size: 1.8rem; 
-                        margin: 0; 
-                        text-shadow: 0 0 8px rgba(0, 191, 255, 0.5); 
-                    }
-                    p { margin: 5px 0; font-size: 1rem; }
-                    strong { color: #00FFFF; font-weight: 600; }
-                    .divider { height: 1px; background-color: #555; margin: 15px 0; }
-                </style>
+            // Ganti HTML rendering dengan panggilan API
+            const receiptHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+                    <style>
+                        body { font-family: sans-serif; background-color: #1a1a1a; color: #e0e0e0; padding: 20px; }
+                        .receipt-container { width: 350px; background-color: #1c1c1c; border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; box-shadow: 0 0 15px rgba(0, 191, 255, 0.4); text-align: left; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .header h1 { color: #00BFFF; font-size: 1.8rem; margin: 0; text-shadow: 0 0 8px rgba(0, 191, 255, 0.5); }
+                        p { margin: 5px 0; font-size: 1rem; }
+                        strong { color: #00FFFF; font-weight: 600; }
+                        .divider { height: 1px; background-color: #555; margin: 15px 0; }
+                    </style>
+                </head>
                 <body>
                     <div class="receipt-container">
                         <div class="header"><h1>Toko Elektronik Neon</h1></div>
@@ -165,16 +139,13 @@ export default async function handler(req, res) {
                         ` : ''}
                     </div>
                 </body>
+                </html>
             `;
-
-            const receiptImageBuffer = await nodeHtmlToImage({
-                html: htmlTemplate,
-                puppeteerArgs: {
-                    args: ['--no-sandbox', '--disable-setuid-sandbox']
-                },
-            });
-
-            const base64Image = `data:image/png;base64,${receiptImageBuffer.toString('base64')}`;
+            
+            const apiFlashUrl = `https://api.apiflash.com/v1/urltoimage?access_key=${APIFLASH_ACCESS_KEY}&format=png&html=${encodeURIComponent(receiptHtml)}`;
+            const apiResponse = await fetch(apiFlashUrl);
+            const imageBuffer = await apiResponse.arrayBuffer();
+            const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
 
             res.status(201).json({ success: true, data: transaction, receiptImageUrl: base64Image });
 
