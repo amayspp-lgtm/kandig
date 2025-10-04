@@ -77,7 +77,6 @@ export default function AdminPage() {
         <div className="container">
             <Head>
                 <title>Halaman Admin</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
             </Head>
             <h1><i className="fas fa-plus-circle"></i> Tambah Transaksi Baru</h1>
             <form onSubmit={handleFormSubmit} className="form">

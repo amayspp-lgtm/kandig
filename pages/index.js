@@ -70,7 +70,6 @@ export default function HomePage() {
         <div className="container">
             <Head>
                 <title>Cek Garansi Produk</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
             </Head>
             <h1><i className="fas fa-shield-alt"></i> Cek Status Garansi</h1>
             <form onSubmit={handleSubmit} className="form">

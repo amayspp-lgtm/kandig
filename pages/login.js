@@ -36,7 +36,6 @@ export default function LoginPage() {
         <div className="container login-form">
             <Head>
                 <title>Login Admin</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
             </Head>
             <h1><i className="fas fa-lock"></i> Login Admin</h1>
             <form onSubmit={handleSubmit} className="form">
