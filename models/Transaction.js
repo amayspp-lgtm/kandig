@@ -5,9 +5,7 @@ const TransactionSchema = new mongoose.Schema({
     productPrice: { type: Number, required: true },
     adminName: { type: String, required: true },
     buyerNumber: { type: String, required: true },
-    // serialNumber dihapus karena tidak digunakan lagi
     transactionCode: { type: String, required: true, unique: true },
-    // purchaseDate dihapus, diganti dengan timestamps: true
     hasActivePeriod: { type: Boolean, required: true },
     activeDuration: { type: Number },
     activeUnit: { type: String, enum: ['days', 'weeks', 'months'] },
@@ -17,7 +15,7 @@ const TransactionSchema = new mongoose.Schema({
     warrantyUnit: { type: String, enum: ['days', 'weeks', 'months'] },
     warrantyExpiryDate: { type: Date },
 }, {
-    timestamps: true
+    timestamps: true // This will automatically add a `createdAt` field
 });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
