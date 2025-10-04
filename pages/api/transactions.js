@@ -4,8 +4,7 @@ import { add, addWeeks, addMonths } from 'date-fns';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
 import nodeHtmlToImage from 'node-html-to-image';
-import chromium from 'chrome-aws-lambda';
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer'; // Gunakan paket puppeteer biasa
 
 const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 
@@ -170,14 +169,9 @@ export default async function handler(req, res) {
 
             const receiptImageBuffer = await nodeHtmlToImage({
                 html: htmlTemplate,
-                puppeteer: puppeteer, // Tambahkan ini
-                puppeteerArgs: [
-                    '--disable-gpu',
-                    '--single-process',
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox'
-                ],
-                executablePath: await chromium.executablePath, // Gunakan executable dari chrome-aws-lambda
+                puppeteerArgs: {
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                },
             });
 
             const base64Image = `data:image/png;base64,${receiptImageBuffer.toString('base64')}`;
@@ -224,4 +218,4 @@ export default async function handler(req, res) {
     } else {
         res.status(405).json({ success: false, error: 'Metode tidak diizinkan.' });
     }
-}}
+}
