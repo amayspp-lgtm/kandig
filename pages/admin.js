@@ -3,16 +3,18 @@ import Head from 'next/head';
 
 export default function AdminPage() {
     const [isAuth, setIsAuth] = useState(false);
-    const [currentMenu, setCurrentMenu] = useState('record'); // 'record' or 'list'
+    const [currentMenu, setCurrentMenu] = useState('record');
     const [formData, setFormData] = useState({
         productName: '', productPrice: '', adminName: '', buyerNumber: '',
         activeDuration: '', activeUnit: 'days', hasActivePeriod: false,
         warrantyDuration: '', warrantyUnit: 'months', hasWarranty: false
     });
     const [message, setMessage] = useState('');
+    const [receiptImage, setReceiptImage] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [expandedItem, setExpandedItem] = useState(null); // State untuk dropdown
 
     useEffect(() => {
         const checkSession = async () => {
@@ -37,7 +39,8 @@ export default function AdminPage() {
         e.preventDefault();
         setIsLoading(true);
         setMessage('Menyimpan data...');
-        
+        setReceiptImage(null);
+
         try {
             const payload = {
                 ...formData,
@@ -56,6 +59,8 @@ export default function AdminPage() {
             if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat menyimpan data.');
     
             setMessage(`Transaksi berhasil disimpan! Kode: ${data.data.transactionCode}`);
+            setReceiptImage(data.receiptImageUrl);
+            
             setFormData({ 
                 productName: '', productPrice: '', adminName: '', buyerNumber: '',
                 activeDuration: '', activeUnit: 'days', hasActivePeriod: false,
@@ -63,6 +68,7 @@ export default function AdminPage() {
             });
         } catch (error) {
             setMessage(error.message);
+            setReceiptImage(null);
         } finally {
             setIsLoading(false);
         }
@@ -80,6 +86,7 @@ export default function AdminPage() {
             if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat mencari.');
             setSearchResults(data.transactions);
             setMessage(`Ditemukan ${data.transactions.length} hasil.`);
+            setExpandedItem(null); // Tutup semua dropdown
         } catch (error) {
             setMessage(error.message);
         } finally {
@@ -87,9 +94,24 @@ export default function AdminPage() {
         }
     };
 
+    const toggleDropdown = (id) => {
+        setExpandedItem(expandedItem === id ? null : id);
+    };
+
     if (!isAuth) {
         return <div className="container">Memuat...</div>;
     }
+
+    const getStatus = (expiryDate, label) => {
+        if (!expiryDate) return null;
+        const today = new Date();
+        const expiry = new Date(expiryDate);
+        if (today > expiry) {
+            return { text: `${label} sudah kedaluwarsa.`, color: 'red', icon: 'exclamation-circle' };
+        }
+        const remainingDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+        return { text: `${label} masih berlaku, sisa ${remainingDays} hari.`, color: 'green', icon: 'check-circle' };
+    };
 
     return (
         <div className="container">
@@ -168,7 +190,17 @@ export default function AdminPage() {
                         
                         <button type="submit" disabled={isLoading}><i className={`fas fa-${isLoading ? 'circle-notch fa-spin' : 'save'}`}></i> Simpan Transaksi</button>
                     </form>
-                    {message && <p className="message">{message}</p>}
+                    {message && <p className={`message ${receiptImage ? 'success' : 'error'}`}>{message}</p>}
+                    
+                    {receiptImage && (
+                        <div className="receipt-section">
+                            <h2><i className="fas fa-receipt"></i> Struk Transaksi</h2>
+                            <img src={receiptImage} alt="Struk Transaksi" className="receipt-img" />
+                            <a href={receiptImage} download="struk_transaksi.png" className="download-link">
+                                <i className="fas fa-download"></i> Unduh Struk
+                            </a>
+                        </div>
+                    )}
                 </>
             )}
 
@@ -176,19 +208,52 @@ export default function AdminPage() {
                 <>
                     <h2><i className="fas fa-list-ul"></i> Daftar Transaksi</h2>
                     <div className="search-section">
-                        <input type="text" id="searchQuery" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari berdasarkan Kode, Produk, Admin, atau No. Pembeli" />
+                        <input type="text" id="searchQuery" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari Kode, Produk, Admin, atau No. Pembeli" />
                         <button onClick={handleSearch} disabled={isLoading}><i className={`fas fa-${isLoading ? 'circle-notch fa-spin' : 'search'}`}></i> Cari</button>
                     </div>
                     {message && <p className="message">{message}</p>}
                     <div id="searchResults" className="results-container">
                         {searchResults.length > 0 ? searchResults.map(trans => (
                             <div key={trans._id} className="search-result-item">
-                                <h3>{trans.productName}</h3>
-                                <p><strong>Kode Transaksi:</strong> {trans.transactionCode}</p>
-                                <p><strong>Harga:</strong> Rp{trans.productPrice.toLocaleString('id-ID')}</p>
-                                <p><strong>Admin:</strong> {trans.adminName}</p>
-                                <p><strong>Nomor Pembeli:</strong> {trans.buyerNumber}</p>
-                                <p><strong>Tanggal Transaksi:</strong> {new Date(trans.createdAt).toLocaleDateString('id-ID')}</p>
+                                <div className="list-header" onClick={() => toggleDropdown(trans._id)}>
+                                    <i className={`fas fa-chevron-${expandedItem === trans._id ? 'up' : 'down'}`}></i>
+                                    <h3>{trans.transactionCode}</h3>
+                                </div>
+                                {expandedItem === trans._id && (
+                                    <div className="dropdown-content">
+                                        <p><strong>Nama Produk:</strong> {trans.productName}</p>
+                                        <p><strong>Harga:</strong> Rp{trans.productPrice.toLocaleString('id-ID')}</p>
+                                        <p><strong>Admin:</strong> {trans.adminName}</p>
+                                        <p><strong>Nomor Pembeli:</strong> {trans.buyerNumber}</p>
+                                        <p><strong>Tanggal Transaksi:</strong> {new Date(trans.createdAt).toLocaleDateString('id-ID')}</p>
+                                        
+                                        {trans.hasActivePeriod && (
+                                            <>
+                                            <hr className="dropdown-divider" />
+                                            <p><strong>Masa Aktif:</strong> {trans.activeDuration} {trans.activeUnit}</p>
+                                            <p><strong>Status Aktif:</strong>
+                                                <span className={`status-indicator ${getStatus(trans.activeExpiryDate, 'Masa Aktif').color === 'red' ? 'expired' : 'active'}`}>
+                                                    <i className={`fas fa-${getStatus(trans.activeExpiryDate, 'Masa Aktif').icon}`}></i>
+                                                    {getStatus(trans.activeExpiryDate, 'Masa Aktif').text}
+                                                </span>
+                                            </p>
+                                            </>
+                                        )}
+                                        
+                                        {trans.hasWarranty && (
+                                            <>
+                                            <hr className="dropdown-divider" />
+                                            <p><strong>Masa Garansi:</strong> {trans.warrantyDuration} {trans.warrantyUnit}</p>
+                                            <p><strong>Status Garansi:</strong>
+                                                <span className={`status-indicator ${getStatus(trans.warrantyExpiryDate, 'Garansi').color === 'red' ? 'expired' : 'active'}`}>
+                                                    <i className={`fas fa-${getStatus(trans.warrantyExpiryDate, 'Garansi').icon}`}></i>
+                                                    {getStatus(trans.warrantyExpiryDate, 'Garansi').text}
+                                                </span>
+                                            </p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )) : <p>Tidak ada hasil untuk ditampilkan.</p>}
                     </div>
