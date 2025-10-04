@@ -383,3 +383,47 @@ hr {
 .duration-input select {
     flex-grow: 1;
 }
+/* Styling for Admin List Menu */
+.search-result-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+    background-color: rgba(0, 191, 255, 0.1);
+}
+
+.list-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.list-header h3 {
+    margin: 0;
+    color: var(--accent-neon-blue);
+    font-size: 1.1rem;
+    flex-grow: 1;
+}
+
+.list-header i {
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+}
+
+.dropdown-content {
+    padding: 0 1rem 1rem 1rem;
+    background-color: rgba(0, 191, 255, 0.03);
+    border-top: 1px solid rgba(0, 191, 255, 0.1);
+}
+
+.dropdown-content p {
+    margin-bottom: 0.5rem;
+}
+
+.dropdown-content hr.dropdown-divider {
+    border: none;
+    border-top: 1px solid rgba(0, 191, 255, 0.1);
+    margin: 1rem 0;
+}
