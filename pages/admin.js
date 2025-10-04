@@ -14,7 +14,7 @@ export default function AdminPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [expandedItem, setExpandedItem] = useState(null); // State untuk dropdown
+    const [expandedItem, setExpandedItem] = useState(null);
 
     useEffect(() => {
         const checkSession = async () => {
@@ -31,6 +31,12 @@ export default function AdminPage() {
         };
         checkSession();
     }, []);
+
+    useEffect(() => {
+        if (currentMenu === 'list') {
+            fetchAllTransactions();
+        }
+    }, [currentMenu]);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleCheckboxChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.checked });
@@ -74,19 +80,37 @@ export default function AdminPage() {
         }
     };
     
+    const fetchAllTransactions = async () => {
+        setIsLoading(true);
+        setMessage('Memuat semua transaksi...');
+        try {
+            const res = await fetch('/api/transactions?q=all');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat memuat data.');
+            setSearchResults(data.transactions);
+            setMessage(`Ditemukan ${data.transactions.length} hasil.`);
+            setExpandedItem(null);
+        } catch (error) {
+            setMessage(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleSearch = async () => {
         if (!searchQuery) {
             setMessage('Kolom pencarian tidak boleh kosong.');
             return;
         }
         setIsLoading(true);
+        setMessage('Mencari...');
         try {
             const res = await fetch(`/api/transactions?q=${searchQuery}`);
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat mencari.');
+            if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat mencari data.');
             setSearchResults(data.transactions);
             setMessage(`Ditemukan ${data.transactions.length} hasil.`);
-            setExpandedItem(null); // Tutup semua dropdown
+            setExpandedItem(null);
         } catch (error) {
             setMessage(error.message);
         } finally {
@@ -98,10 +122,6 @@ export default function AdminPage() {
         setExpandedItem(expandedItem === id ? null : id);
     };
 
-    if (!isAuth) {
-        return <div className="container">Memuat...</div>;
-    }
-
     const getStatus = (expiryDate, label) => {
         if (!expiryDate) return null;
         const today = new Date();
@@ -112,6 +132,10 @@ export default function AdminPage() {
         const remainingDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
         return { text: `${label} masih berlaku, sisa ${remainingDays} hari.`, color: 'green', icon: 'check-circle' };
     };
+
+    if (!isAuth) {
+        return <div className="container">Memuat...</div>;
+    }
 
     return (
         <div className="container">
@@ -164,7 +188,7 @@ export default function AdminPage() {
                             <div className="form-group">
                                 <label><i className="fas fa-clock"></i> Masa Aktif</label>
                                 <div className="duration-input">
-                                    <input type="number" id="activeDuration" name="activeDuration" value={formData.activeDuration} onChange={handleChange} required placeholder="Durasi" />
+                                    <input type="number" id="activeDuration" name="activeDuration" value={formData.activeDuration} onChange={handleChange} required={formData.hasActivePeriod} placeholder="Durasi" />
                                     <select id="activeUnit" name="activeUnit" value={formData.activeUnit} onChange={handleChange}>
                                         <option value="days">Hari</option>
                                         <option value="weeks">Minggu</option>
@@ -178,7 +202,7 @@ export default function AdminPage() {
                             <div className="form-group">
                                 <label><i className="fas fa-shield-alt"></i> Masa Garansi</label>
                                 <div className="duration-input">
-                                    <input type="number" id="warrantyDuration" name="warrantyDuration" value={formData.warrantyDuration} onChange={handleChange} required placeholder="Durasi" />
+                                    <input type="number" id="warrantyDuration" name="warrantyDuration" value={formData.warrantyDuration} onChange={handleChange} required={formData.hasWarranty} placeholder="Durasi" />
                                     <select id="warrantyUnit" name="warrantyUnit" value={formData.warrantyUnit} onChange={handleChange}>
                                         <option value="days">Hari</option>
                                         <option value="weeks">Minggu</option>
