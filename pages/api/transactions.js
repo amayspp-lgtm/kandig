@@ -4,6 +4,8 @@ import { add, addWeeks, addMonths } from 'date-fns';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
 import nodeHtmlToImage from 'node-html-to-image';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 
@@ -20,9 +22,9 @@ function authenticate(req) {
 }
 
 function generateTransactionCode() {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; // Tambahkan angka untuk variasi
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = 'KNT-';
-    const length = 10; // Tetapkan panjang tetap untuk menghindari bug
+    const length = 10;
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
@@ -168,9 +170,16 @@ export default async function handler(req, res) {
 
             const receiptImageBuffer = await nodeHtmlToImage({
                 html: htmlTemplate,
-                puppeteerArgs: { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+                puppeteer: puppeteer, // Tambahkan ini
+                puppeteerArgs: [
+                    '--disable-gpu',
+                    '--single-process',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox'
+                ],
+                executablePath: await chromium.executablePath, // Gunakan executable dari chrome-aws-lambda
             });
-            
+
             const base64Image = `data:image/png;base64,${receiptImageBuffer.toString('base64')}`;
 
             res.status(201).json({ success: true, data: transaction, receiptImageUrl: base64Image });
@@ -179,8 +188,7 @@ export default async function handler(req, res) {
             console.error('Error saving transaction or creating image:', error);
             res.status(500).json({ success: false, error: 'Terjadi kesalahan pada server.' });
         }
-    } 
-    else if (req.method === 'GET') {
+    } else if (req.method === 'GET') {
         const { q, transactionCode } = req.query;
 
         try {
@@ -193,9 +201,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ success: true, transaction: transactions });
             }
             
-            if (q === 'all') { // Ambil semua transaksi
+            if (q === 'all') {
                 transactions = await Transaction.find().sort({ createdAt: -1 });
-            } else if (q) { // Pencarian
+            } else if (q) {
                 const searchRegex = new RegExp(q, 'i');
                 transactions = await Transaction.find({
                     $or: [
@@ -216,4 +224,4 @@ export default async function handler(req, res) {
     } else {
         res.status(405).json({ success: false, error: 'Metode tidak diizinkan.' });
     }
-}
+}}
