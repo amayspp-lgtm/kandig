@@ -1,3 +1,4 @@
+/* Import Font dari Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
 :root {
@@ -15,9 +16,18 @@
     --transition-speed: 0.3s ease;
 }
 
+/* Reset default browser styles */
+html,
 body {
-    margin: 0;
     padding: 0;
+    margin: 0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
     font-family: 'Poppins', sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-light);
@@ -197,7 +207,6 @@ button[type="submit"]:disabled {
     border: 1px solid var(--success-neon-green);
 }
 
-/* Footer Nav for Admin and Home */
 .footer-nav {
     margin-top: 2rem;
 }
