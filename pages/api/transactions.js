@@ -4,8 +4,6 @@ import { add, addWeeks, addMonths } from 'date-fns';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
 import nodeHtmlToImage from 'node-html-to-image';
-import path from 'path';
-import fs from 'fs';
 
 const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 
@@ -22,9 +20,9 @@ function authenticate(req) {
 }
 
 function generateTransactionCode() {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; // Tambahkan angka untuk variasi
     let result = 'KNT-';
-    const length = Math.floor(Math.random() * 5) + 8;
+    const length = 10; // Tetapkan panjang tetap untuk menghindari bug
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
@@ -34,7 +32,6 @@ function generateTransactionCode() {
 export default async function handler(req, res) {
     await dbConnect();
 
-    // POST: Logika untuk mencatat transaksi baru (hanya untuk admin)
     if (req.method === 'POST') {
         if (!authenticate(req)) {
             return res.status(401).json({ success: false, error: 'Akses ditolak. Silakan login sebagai admin.' });
@@ -179,14 +176,10 @@ export default async function handler(req, res) {
             res.status(201).json({ success: true, data: transaction, receiptImageUrl: base64Image });
 
         } catch (error) {
-            if (error.code === 11000) {
-                return res.status(409).json({ success: false, error: 'Kode transaksi sudah terdaftar.' });
-            }
             console.error('Error saving transaction or creating image:', error);
             res.status(500).json({ success: false, error: 'Terjadi kesalahan pada server.' });
         }
     } 
-    // GET: Logika untuk pencarian dan cek transaksi (bisa diakses member & admin)
     else if (req.method === 'GET') {
         const { q, transactionCode } = req.query;
 
@@ -200,7 +193,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ success: true, transaction: transactions });
             }
             
-            if (q) {
+            if (q === 'all') { // Ambil semua transaksi
+                transactions = await Transaction.find().sort({ createdAt: -1 });
+            } else if (q) { // Pencarian
                 const searchRegex = new RegExp(q, 'i');
                 transactions = await Transaction.find({
                     $or: [
@@ -210,10 +205,9 @@ export default async function handler(req, res) {
                         { transactionCode: searchRegex },
                     ]
                 });
-                return res.status(200).json({ success: true, transactions });
             }
 
-            return res.status(400).json({ success: false, error: 'Parameter pencarian tidak valid.' });
+            return res.status(200).json({ success: true, transactions });
 
         } catch (error) {
             console.error('Error saat mencari transaksi:', error);
