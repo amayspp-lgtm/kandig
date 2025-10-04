@@ -9,14 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "chrome-aws-lambda": "^10.1.0",
     "cookie": "^0.6.0",
     "date-fns": "^3.6.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
     "next": "14.2.3",
     "node-html-to-image": "^3.4.0",
-    "puppeteer-core": "^22.9.0",
+    "puppeteer": "^22.15.0",
     "react": "^18",
     "react-dom": "^18"
   },
