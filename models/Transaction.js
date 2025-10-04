@@ -5,12 +5,17 @@ const TransactionSchema = new mongoose.Schema({
     productPrice: { type: Number, required: true },
     adminName: { type: String, required: true },
     buyerNumber: { type: String, required: true },
-    serialNumber: { type: String, required: true, unique: true, trim: true },
+    // serialNumber dihapus karena tidak digunakan lagi
     transactionCode: { type: String, required: true, unique: true },
-    purchaseDate: { type: Date, required: true },
-    warrantyDuration: { type: Number, required: true, min: 0 },
-    warrantyUnit: { type: String, required: true, enum: ['days', 'weeks', 'months'] },
-    warrantyExpiryDate: { type: Date, required: true },
+    // purchaseDate dihapus, diganti dengan timestamps: true
+    hasActivePeriod: { type: Boolean, required: true },
+    activeDuration: { type: Number },
+    activeUnit: { type: String, enum: ['days', 'weeks', 'months'] },
+    activeExpiryDate: { type: Date },
+    hasWarranty: { type: Boolean, required: true },
+    warrantyDuration: { type: Number },
+    warrantyUnit: { type: String, enum: ['days', 'weeks', 'months'] },
+    warrantyExpiryDate: { type: Date },
 }, {
     timestamps: true
 });
