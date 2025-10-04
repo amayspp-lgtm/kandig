@@ -306,3 +306,80 @@ hr {
     margin-top: 0;
     color: var(--accent-neon-blue);
 }
+/* ... (existing styles) ... */
+
+.admin-menu {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.admin-menu button {
+    padding: 0.75rem 1.5rem;
+    background: #2c2c2c;
+    color: var(--text-secondary);
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.admin-menu button.active,
+.admin-menu button:hover {
+    background-color: var(--accent-neon-blue);
+    color: var(--bg-dark);
+    border-color: var(--accent-neon-blue);
+    box-shadow: 0 0 10px var(--accent-neon-blue-shadow);
+}
+
+.checkbox-options {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-top: 1rem;
+    text-align: left;
+}
+
+.option-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.option-group input[type="checkbox"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent-neon-blue);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.option-group input[type="checkbox"]:checked {
+    background-color: var(--accent-neon-blue);
+    border-color: var(--accent-neon-blue);
+}
+
+.option-group input[type="checkbox"]:checked::after {
+    content: '\2713'; /* Checkmark symbol */
+    font-size: 14px;
+    color: var(--bg-dark);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.duration-input {
+    display: flex;
+    gap: 10px;
+}
+
+.duration-input input,
+.duration-input select {
+    flex-grow: 1;
+}
