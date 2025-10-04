@@ -24,7 +24,7 @@ function authenticate(req) {
 function generateTransactionCode() {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let result = 'KNT-';
-    const length = Math.floor(Math.random() * 5) + 8; // 8-12 random letters
+    const length = Math.floor(Math.random() * 5) + 8;
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
@@ -53,7 +53,6 @@ export default async function handler(req, res) {
             warrantyUnit
         } = req.body;
 
-        // Validasi input wajib
         if (!productName || !productPrice || !adminName || !buyerNumber) {
             return res.status(400).json({ success: false, error: 'Nama produk, harga, admin, dan nomor pembeli harus diisi.' });
         }
