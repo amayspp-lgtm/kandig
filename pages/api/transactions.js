@@ -3,9 +3,10 @@ import Transaction from '../../models/Transaction';
 import { add, addWeeks, addMonths } from 'date-fns';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
+import ApiKey from '../../models/ApiKey'; // Impor model ApiKey
+import fetch from 'node-fetch';
 
 const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
-const APIFLASH_ACCESS_KEY = process.env.APIFLASH_ACCESS_KEY; // Tambahkan ini di .env.local
 
 function authenticate(req) {
     const cookies = cookie.parse(req.headers.cookie || '');
@@ -102,55 +103,60 @@ export default async function handler(req, res) {
                 warrantyUnit: hasWarranty ? warrantyUnit : null, warrantyExpiryDate: hasWarranty ? warrantyExpiryDate : null,
             });
 
-            // Ganti HTML rendering dengan panggilan API
-            const receiptHtml = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-                    <style>
-                        body { font-family: sans-serif; background-color: #1a1a1a; color: #e0e0e0; padding: 20px; }
-                        .receipt-container { width: 350px; background-color: #1c1c1c; border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; box-shadow: 0 0 15px rgba(0, 191, 255, 0.4); text-align: left; }
-                        .header { text-align: center; margin-bottom: 20px; }
-                        .header h1 { color: #00BFFF; font-size: 1.8rem; margin: 0; text-shadow: 0 0 8px rgba(0, 191, 255, 0.5); }
-                        p { margin: 5px 0; font-size: 1rem; }
-                        strong { color: #00FFFF; font-weight: 600; }
-                        .divider { height: 1px; background-color: #555; margin: 15px 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="receipt-container">
-                        <div class="header"><h1>Toko Elektronik Neon</h1></div>
-                        <p><strong>Kode Transaksi:</strong> ${transaction.transactionCode}</p>
-                        <p><strong>Admin:</strong> ${transaction.adminName}</p>
-                        <p><strong>Nomor Pembeli:</strong> ${transaction.buyerNumber}</p>
-                        <div class="divider"></div>
-                        <p><strong>Nama Produk:</strong> ${transaction.productName}</p>
-                        <p><strong>Harga:</strong> Rp${transaction.productPrice.toLocaleString('id-ID')}</p>
-                        <div class="divider"></div>
-                        ${transaction.hasActivePeriod ? `
-                            <p><strong>Masa Aktif:</strong> ${transaction.activeDuration} ${transaction.activeUnit}</p>
-                            <p><strong>Aktif Hingga:</strong> ${new Date(transaction.activeExpiryDate).toLocaleDateString('id-ID')}</p>
-                            <div class="divider"></div>
-                        ` : ''}
-                        ${transaction.hasWarranty ? `
-                            <p><strong>Masa Garansi:</strong> ${transaction.warrantyDuration} ${transaction.warrantyUnit}</p>
-                            <p><strong>Garansi Hingga:</strong> ${new Date(transaction.warrantyExpiryDate).toLocaleDateString('id-ID')}</p>
-                        ` : ''}
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            const apiFlashUrl = `https://api.apiflash.com/v1/urltoimage?access_key=${APIFLASH_ACCESS_KEY}&format=png&html=${encodeURIComponent(receiptHtml)}`;
-            const apiResponse = await fetch(apiFlashUrl);
-            const imageBuffer = await apiResponse.arrayBuffer();
-            const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
+            // Ambil semua API Keys dari database, diurutkan berdasarkan prioritas
+            const invoiceApiKeys = await ApiKey.find().sort({ priority: 1 });
 
-            res.status(201).json({ success: true, data: transaction, receiptImageUrl: base64Image });
+            let invoiceUrl = null;
+            let success = false;
+
+            for (const api of invoiceApiKeys) {
+                try {
+                    const invoicePayload = {
+                        to: transaction.buyerNumber,
+                        logo: 'https://example.com/logo.png',
+                        number: transaction.transactionCode,
+                        date: new Date().toLocaleDateString('en-US'),
+                        items: [
+                            {
+                                name: transaction.productName,
+                                quantity: 1,
+                                unit_cost: transaction.productPrice,
+                                description: `Masa Aktif: ${transaction.activeDuration || 'N/A'} ${transaction.activeUnit || ''} \nMasa Garansi: ${transaction.warrantyDuration || 'N/A'} ${transaction.warrantyUnit || ''}`
+                            }
+                        ],
+                        notes: `Admin: ${transaction.adminName}`
+                    };
+
+                    const invoiceApiResponse = await fetch('https://invoice-generator.com', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${api.key}`
+                        },
+                        body: JSON.stringify(invoicePayload),
+                    });
+                    
+                    if (!invoiceApiResponse.ok) {
+                        console.error(`API Invoice with key ${api.name} failed with status: ${invoiceApiResponse.status}`);
+                        continue;
+                    }
+
+                    invoiceUrl = invoiceApiResponse.url;
+                    success = true;
+                    break;
+                } catch (error) {
+                    console.error(`Error saat mencoba kunci API: ${api.name}`, error);
+                }
+            }
+
+            if (success) {
+                res.status(201).json({ success: true, data: transaction, invoiceUrl: invoiceUrl });
+            } else {
+                res.status(500).json({ success: false, error: 'Gagal membuat invoice setelah mencoba semua kunci API.' });
+            }
 
         } catch (error) {
-            console.error('Error saving transaction or creating image:', error);
+            console.error('Error saving transaction or creating invoice:', error);
             res.status(500).json({ success: false, error: 'Terjadi kesalahan pada server.' });
         }
     } else if (req.method === 'GET') {
