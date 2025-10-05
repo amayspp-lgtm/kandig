@@ -113,7 +113,7 @@ export default async function handler(req, res) {
                 try {
                     const invoicePayload = {
                         to: transaction.buyerNumber,
-                        logo: 'https://example.com/logo.png',
+                        logo: 'https://example.com/logo.png', // Ganti dengan URL logo toko Anda
                         number: transaction.transactionCode,
                         date: new Date().toLocaleDateString('en-US'),
                         items: [
@@ -131,9 +131,10 @@ export default async function handler(req, res) {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${api.key}`
+                            'Authorization': `Bearer ${api.key}` // Menggunakan kunci dari database
                         },
                         body: JSON.stringify(invoicePayload),
+                        redirect: 'follow', // Pastikan fetch mengikuti pengalihan
                     });
                     
                     if (!invoiceApiResponse.ok) {
@@ -141,7 +142,7 @@ export default async function handler(req, res) {
                         continue;
                     }
 
-                    invoiceUrl = invoiceApiResponse.url;
+                    invoiceUrl = invoiceApiResponse.url; // response.url akan berisi URL akhir setelah redirect
                     success = true;
                     break;
                 } catch (error) {
