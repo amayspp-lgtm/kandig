@@ -3,16 +3,12 @@ import Head from 'next/head';
 
 export default function AdminPage() {
     const [isAuth, setIsAuth] = useState(false);
-    const [currentMenu, setCurrentMenu] = useState('record'); // 'record', 'list', atau 'api'
+    const [currentMenu, setCurrentMenu] = useState('record');
     const [formData, setFormData] = useState({
         productName: '', productPrice: '', adminName: '', buyerNumber: '',
         activeDuration: '', activeUnit: 'days', hasActivePeriod: false,
         warrantyDuration: '', warrantyUnit: 'months', hasWarranty: false
     });
-    const [apiFormData, setApiFormData] = useState({
-        name: '', key: '', priority: 0
-    });
-    const [apiKeys, setApiKeys] = useState([]);
     const [message, setMessage] = useState('');
     const [invoiceUrl, setInvoiceUrl] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -39,14 +35,11 @@ export default function AdminPage() {
     useEffect(() => {
         if (currentMenu === 'list') {
             fetchAllTransactions();
-        } else if (currentMenu === 'api') {
-            fetchApiKeys();
         }
     }, [currentMenu]);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleCheckboxChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.checked });
-    const handleApiChange = (e) => setApiFormData({ ...apiFormData, [e.target.name]: e.target.value });
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
@@ -69,10 +62,12 @@ export default function AdminPage() {
             });
             const data = await res.json();
     
-            if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan saat menyimpan data.');
+            if (!res.ok) {
+                throw new Error(data.error || 'Terjadi kesalahan saat menyimpan data.');
+            }
     
             setMessage(`Transaksi berhasil disimpan! Kode: ${data.data.transactionCode}`);
-            setInvoiceUrl(data.invoiceUrl);
+            setInvoiceUrl(data.invoiceUrl); // URL sekarang akan langsung dari API
             
             setFormData({ 
                 productName: '', productPrice: '', adminName: '', buyerNumber: '',
@@ -125,62 +120,6 @@ export default function AdminPage() {
         }
     };
 
-    const fetchApiKeys = async () => {
-        setIsLoading(true);
-        setMessage('Memuat API Keys...');
-        try {
-            const res = await fetch('/api/api_keys');
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Gagal memuat API Keys.');
-            setApiKeys(data.data);
-            setMessage('');
-        } catch (error) {
-            setMessage(error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleAddApi = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/api_keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiFormData),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Gagal menambahkan API Key.');
-            setMessage('API Key berhasil ditambahkan!');
-            setApiFormData({ name: '', key: '', priority: 0 });
-            fetchApiKeys(); // Muat ulang daftar API Key
-        } catch (error) {
-            setMessage(error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleDeleteApi = async (id) => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/api_keys', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Gagal menghapus API Key.');
-            setMessage(data.message);
-            fetchApiKeys(); // Muat ulang daftar API Key
-        } catch (error) {
-            setMessage(error.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const toggleDropdown = (id) => {
         setExpandedItem(expandedItem === id ? null : id);
     };
@@ -212,9 +151,6 @@ export default function AdminPage() {
                 </button>
                 <button onClick={() => setCurrentMenu('list')} className={currentMenu === 'list' ? 'active' : ''}>
                     <i className="fas fa-list-ul"></i> Daftar Transaksi
-                </button>
-                <button onClick={() => setCurrentMenu('api')} className={currentMenu === 'api' ? 'active' : ''}>
-                    <i className="fas fa-key"></i> Kelola API
                 </button>
             </div>
 
@@ -349,55 +285,10 @@ export default function AdminPage() {
                     </div>
                 </>
             )}
-
-            {currentMenu === 'api' && (
-                <>
-                    <h1><i className="fas fa-key"></i> Kelola API Keys</h1>
-                    <form onSubmit={handleAddApi} className="form api-form">
-                        <div className="form-group">
-                            <label htmlFor="name">Nama API</label>
-                            <input type="text" id="name" name="name" value={apiFormData.name} onChange={handleApiChange} required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="key">Kunci API</label>
-                            <input type="text" id="key" name="key" value={apiFormData.key} onChange={handleApiChange} required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="priority">Prioritas</label>
-                            <input type="number" id="priority" name="priority" value={apiFormData.priority} onChange={handleApiChange} required />
-                        </div>
-                        <button type="submit" disabled={isLoading}>
-                            <i className={`fas fa-${isLoading ? 'circle-notch fa-spin' : 'plus'}`}></i> Tambah API Key
-                        </button>
-                    </form>
-                    
-                    <hr />
-
-                    <h2>Daftar Kunci API</h2>
-                    {apiKeys.length > 0 ? (
-                        <div className="results-container">
-                            {apiKeys.map(api => (
-                                <div key={api._id} className="api-item search-result-item">
-                                    <div className="api-info">
-                                        <h3>{api.name}</h3>
-                                        <p>Prioritas: {api.priority}</p>
-                                        <p className="api-key-hidden">Kunci: {api.key}</p>
-                                    </div>
-                                    <button className="delete-btn" onClick={() => handleDeleteApi(api._id)}>
-                                        <i className="fas fa-trash-alt"></i> Hapus
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p>Tidak ada API Key yang terdaftar.</p>
-                    )}
-                </>
-            )}
             
             <div className="footer-nav">
                 <a href="/"><i className="fas fa-home"></i> Ke Halaman Utama</a>
             </div>
         </div>
     );
-}
+        }
